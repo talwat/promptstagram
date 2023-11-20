@@ -1,0 +1,11 @@
+{
+    "terminal.integrated.env.osx": {
+        "DATABASE_URL": "sqlite:prompt.db"
+    },
+    "rust-analyzer.check.extraEnv": {
+        "DATABASE_URL": "sqlite:prompt.db"
+    },
+    "rust-analyzer.cargo.extraEnv": {
+        "DATABASE_URL": "sqlite:prompt.db"
+    }
+}
