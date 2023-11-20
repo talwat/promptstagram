@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS prompts
 (
-    content varlen(255)
+    id INTEGER PRIMARY KEY,
+    content TINYTEXT NOT NULL
 );

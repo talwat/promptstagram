@@ -44,7 +44,7 @@ async fn main() {
 
 #[debug_handler]
 async fn prompt_add(State(state): State<AppState>, Json(json): Json<Prompt>) -> Json<Prompt> {
-    sqlx::query!(r#"INSERT INTO prompts VALUES ( ?1 )"#, json.content)
+    sqlx::query!(r#"INSERT INTO prompts VALUES ( NULL, ?1 )"#, json.content)
         .execute(&state.pool)
         .await
         .unwrap();
