@@ -1,20 +1,20 @@
+use core::panic;
 use std::env;
 
 use axum::{
-    extract::{State, Json},
-    routing::post, Router, debug_handler,
+    debug_handler,
+    extract::{Json, Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+    Router,
 };
-use serde::{Deserialize, Serialize};
+use backend::{db, Prompt};
 use sqlx::{Pool, Sqlite, SqlitePool};
 
 #[derive(Clone)]
 struct AppState {
     pub pool: Pool<Sqlite>,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Prompt {
-    pub content: String,
 }
 
 #[tokio::main]
@@ -26,13 +26,12 @@ async fn main() {
     sqlx::migrate!().run(&pool).await.unwrap();
 
     let state = AppState { pool };
-    
-    let api = Router::new()
-        .route("/prompt/add", post(prompt_add));
 
-    let app = Router::new()
-        .nest("/api", api)
-        .with_state(state);
+    let api = Router::new()
+        .route("/prompt/add", post(prompt_add))
+        .route("/prompt/get/:id", get(prompt_get));
+
+    let app = Router::new().nest("/api", api).with_state(state);
 
     println!("listening on port 3000");
 
@@ -43,11 +42,33 @@ async fn main() {
 }
 
 #[debug_handler]
-async fn prompt_add(State(state): State<AppState>, Json(json): Json<Prompt>) -> Json<Prompt> {
-    sqlx::query!(r#"INSERT INTO prompts VALUES ( NULL, ?1 )"#, json.content)
-        .execute(&state.pool)
-        .await
-        .unwrap();
+async fn prompt_add(
+    State(state): State<AppState>,
+    Json(json): Json<Prompt>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let Ok(id) = db::insert_prompt(json, &state.pool).await else {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    };
 
-    return Json(json);
+    let Ok(prompt) = db::get_prompt(id, &state.pool).await else {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    };
+
+    Ok(Json(prompt))
+}
+
+#[debug_handler]
+async fn prompt_get(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let prompt = match db::get_prompt(id, &state.pool).await {
+        Ok(prompt) => prompt,
+        Err(err) => match err {
+            sqlx::Error::RowNotFound => return Err(StatusCode::NOT_FOUND),
+            _ => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+        },
+    };
+
+    Ok(Json(prompt))
 }

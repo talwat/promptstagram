@@ -1,5 +1,13 @@
 CREATE TABLE IF NOT EXISTS prompts
 (
-    id INTEGER PRIMARY KEY,
-    content TINYTEXT NOT NULL
+    title TINYTEXT NOT NULL,
+    id INTEGER PRIMARY KEY NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS segments
+(
+    prompt_id INTEGER NOT NULL,
+    color TINYTEXT NOT NULL,
+    text TINYTEXT NOT NULL,
+    FOREIGN KEY(prompt_id) REFERENCES prompts(id)
 );
